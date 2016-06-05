@@ -63,8 +63,7 @@ func GenerateCACertificate(opts ...Option) (certOut, keyOut []byte, err error) {
 func GenerateCertificate(opts ...Option) (certOut, keyOut []byte, err error) {
 
 	options := Options{
-		Host:               []string{"localhost"},
-		CommonName:         "localhost",
+		Host:               []string{"localhost", "127.0.0.1"},
 		Country:            []string{"CN"},
 		Province:           []string{"Beijing"},
 		Locality:           []string{"Beijing"},
@@ -78,7 +77,7 @@ func GenerateCertificate(opts ...Option) (certOut, keyOut []byte, err error) {
 		opt(&options)
 	}
 
-	if options.IsServerCert {
+	if !options.IsServerCert {
 		options.Host = nil
 	}
 
