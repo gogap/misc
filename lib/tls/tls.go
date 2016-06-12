@@ -83,15 +83,8 @@ func GenerateCertificate(opts ...Option) (certOut, keyOut []byte, err error) {
 
 	var tlsCACert tls.Certificate
 
-	if options.CACertfile != "" && options.CAKeyfile != "" {
-		if tlsCACert, err = tls.LoadX509KeyPair(options.CACertfile, options.CAKeyfile); err != nil {
-			return
-		}
-	} else if options.CACert != nil && options.CAKey != nil {
-		certPEM, _ := pem.Decode(options.CACert)
-		keyPEM, _ := pem.Decode(options.CAKey)
-
-		if tlsCACert, err = tls.X509KeyPair(certPEM.Bytes, keyPEM.Bytes); err != nil {
+	if options.CACert != nil && options.CAKey != nil {
+		if tlsCACert, err = tls.X509KeyPair(options.CACert, options.CAKey); err != nil {
 			return
 		}
 	}

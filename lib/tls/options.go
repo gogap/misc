@@ -1,12 +1,14 @@
 package tls
 
+import (
+	"io/ioutil"
+	"os"
+)
+
 type Option func(*Options)
 
 type Options struct {
 	Host []string
-
-	CACertfile string
-	CAKeyfile  string
 
 	CACert []byte
 	CAKey  []byte
@@ -27,17 +29,37 @@ func Host(host ...string) Option {
 	}
 }
 
-func CAFile(caCertfile, caKeyfile string) Option {
-	return func(o *Options) {
-		o.CACertfile = caCertfile
-		o.CAKeyfile = caKeyfile
-	}
-}
-
-func CAData(cert, key []byte) Option {
+func CACert(cert, key []byte) Option {
 	return func(o *Options) {
 		o.CACert = cert
 		o.CAKey = key
+	}
+}
+
+func CACertFromFile(certfile, keyfile string) Option {
+	return func(o *Options) {
+		o.CACert, _ = ioutil.ReadFile(certfile)
+		o.CAKey, _ = ioutil.ReadFile(keyfile)
+	}
+}
+
+func CACertFromEnv(certEnvKey, keyEnvKey string) Option {
+	return func(o *Options) {
+		certfile := os.Getenv(certEnvKey)
+		keyfile := os.Getenv(keyEnvKey)
+
+		o.CACert, _ = ioutil.ReadFile(certfile)
+		o.CAKey, _ = ioutil.ReadFile(keyfile)
+	}
+}
+
+func CACertFromProvider(fn func() (cert, key []byte, err error)) Option {
+	return func(o *Options) {
+		c, k, e := fn()
+		if e != nil {
+			o.CACert = c
+			o.CAKey = k
+		}
 	}
 }
 
