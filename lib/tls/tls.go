@@ -8,6 +8,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
+	"io/ioutil"
 	"math/big"
 	"net"
 	"time"
@@ -38,6 +40,8 @@ func GenerateCACertificate(opts ...Option) (certOut, keyOut []byte, err error) {
 	template.KeyUsage |= x509.KeyUsageCertSign
 	template.KeyUsage |= x509.KeyUsageKeyEncipherment
 	template.KeyUsage |= x509.KeyUsageKeyAgreement
+
+	template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageAny}
 
 	var priv *rsa.PrivateKey
 
@@ -111,16 +115,15 @@ func GenerateCertificate(opts ...Option) (certOut, keyOut []byte, err error) {
 		return
 	}
 
+	if options.IsServerCert {
+		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
+	} else {
+		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
+		template.KeyUsage = x509.KeyUsageDigitalSignature
+	}
+
 	var derBytes []byte
 	if tlsCACert.Certificate == nil {
-
-		if options.IsServerCert {
-			template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
-		} else {
-			template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
-			template.KeyUsage = x509.KeyUsageDigitalSignature
-		}
-
 		if derBytes, err = x509.CreateCertificate(rand.Reader, template, template, &priv.PublicKey, priv); err != nil {
 			return
 		}
@@ -143,6 +146,30 @@ func GenerateCertificate(opts ...Option) (certOut, keyOut []byte, err error) {
 
 	certOut = cOut.Bytes()
 	keyOut = kOut.Bytes()
+
+	return
+}
+
+func LoadCertificates(certs ...string) (pool *x509.CertPool, err error) {
+
+	if len(certs) == 0 {
+		return
+	}
+
+	p := x509.NewCertPool()
+
+	for _, cert := range certs {
+		var pem []byte
+		if pem, err = ioutil.ReadFile(cert); err != nil {
+			return
+		}
+		if !p.AppendCertsFromPEM(pem) {
+			errors.New("failed appending certs:" + cert)
+			return
+		}
+	}
+
+	pool = p
 
 	return
 }
